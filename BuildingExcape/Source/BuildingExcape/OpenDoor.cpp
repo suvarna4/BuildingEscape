@@ -25,13 +25,23 @@ void UOpenDoor::BeginPlay()
 
 	// ...
 	Owner = GetOwner();
+
+	if (!Owner) {
+		UE_LOG(LogTemp, Error, TEXT("Could not find owner"));
+	}
+
+	if (!PressurePlate) {
+		UE_LOG(LogTemp, Error, TEXT("Pressure plate uninitialized."));
+	}
 }
 
 void UOpenDoor::OpenDoor() {
+	if (!Owner) { return;  }
 	Owner->SetActorRotation(FRotator(0.0f, OpenAngle, 0.0f));
 }
 
 void UOpenDoor::CloseDoor() {
+	if (!Owner) { return; }
 	Owner->SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
 }
 
@@ -57,6 +67,8 @@ float UOpenDoor::GetTotalMassOfActorsOnPlate() {
 	float TotalMass = 0.f;
 
 	TArray<AActor*> OverlappingActors;
+
+	if (!PressurePlate) { return 0; }
 	PressurePlate->GetOverlappingActors(OverlappingActors);
 
 	for (const auto* Actor : OverlappingActors) {
