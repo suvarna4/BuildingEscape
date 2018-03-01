@@ -12,16 +12,12 @@ UGrabber::UGrabber()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-
-	// ...
 }
-
 
 // Called when the game starts
 void UGrabber::BeginPlay()
 {
 	Super::BeginPlay();
-	
 	FindPhysicsHandleComponent();
 	SetupInputComponent();
 }
@@ -51,9 +47,19 @@ void UGrabber::SetupInputComponent() {
 	}
 }
 
+// Called every frame
+void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	// if physics handle is attached
+	if (PhysicsHandle->GrabbedComponent) {
+		// move object we're holding
+		PhysicsHandle->SetTargetLocation(GetReachLocation().v2);
+	}
+}
+
 void UGrabber::Grab() {
-	UE_LOG(LogTemp, Warning, TEXT("Grabbing"));
-	
 	// Try and reach any actors with physics body collision channel set
 	auto HitResult = GetFirstPhysicsBodyInReach();
 	auto ComponentToGrab = HitResult.GetComponent();
@@ -71,34 +77,29 @@ void UGrabber::Grab() {
 }
 
 void UGrabber::Release() {
-	UE_LOG(LogTemp, Warning, TEXT("Releasing"));
-	// TODO release physics handle
-
 	PhysicsHandle->ReleaseComponent();
-}
-
-// Called every frame
-void UGrabber::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	FVector PlayerViewPointLocation;
-	FRotator PlayerViewPointRotation;
-	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
-		PlayerViewPointLocation,
-		PlayerViewPointRotation);
-
-	FVector LineTraceEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
-
-	// if physics handle is attached
-	if (PhysicsHandle->GrabbedComponent) {
-		// move object we're holding
-		PhysicsHandle->SetTargetLocation(LineTraceEnd);
-	}
 }
 
 const FHitResult UGrabber::GetFirstPhysicsBodyInReach() {
 	// Get player view point this tick
+	FTwoVectors TracePoints = GetReachLocation();
+
+	// Setup query params
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("")), false, GetOwner());
+
+	GetWorld()->LineTraceSingleByObjectType(
+		HitResult,
+		TracePoints.v1,
+		TracePoints.v2,
+		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
+		TraceParams
+	);
+
+	return HitResult;
+}
+
+const FTwoVectors UGrabber::GetReachLocation() {
 	FVector PlayerViewPointLocation;
 	FRotator PlayerViewPointRotation;
 	GetWorld()->GetFirstPlayerController()->GetPlayerViewPoint(
@@ -106,19 +107,6 @@ const FHitResult UGrabber::GetFirstPhysicsBodyInReach() {
 		PlayerViewPointRotation);
 
 	FVector LineTraceEnd = PlayerViewPointLocation + PlayerViewPointRotation.Vector() * Reach;
-
-	// Setup query params
-	FHitResult Hit;
-	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(TEXT("")), false, GetOwner());
-
-	bool IsHit = GetWorld()->LineTraceSingleByObjectType(
-		Hit,
-		PlayerViewPointLocation,
-		LineTraceEnd,
-		FCollisionObjectQueryParams(ECollisionChannel::ECC_PhysicsBody),
-		TraceParams
-	);
-
-	return Hit;
+	return FTwoVectors(PlayerViewPointLocation, LineTraceEnd);
 }
 
