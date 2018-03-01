@@ -35,17 +35,6 @@ void UOpenDoor::BeginPlay()
 	}
 }
 
-void UOpenDoor::OpenDoor() {
-	if (!Owner) { return;  }
-	Owner->SetActorRotation(FRotator(0.0f, OpenAngle, 0.0f));
-}
-
-void UOpenDoor::CloseDoor() {
-	if (!Owner) { return; }
-	Owner->SetActorRotation(FRotator(0.0f, 0.0f, 0.0f));
-}
-
-
 // Called every frame
 void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
@@ -53,13 +42,11 @@ void UOpenDoor::TickComponent(float DeltaTime, ELevelTick TickType, FActorCompon
 
 	// Poll Trigger Volume
 	// If the ActorThatOpens is in the volume
-	if (GetTotalMassOfActorsOnPlate() > 27.5f) {
-		OpenDoor();
-		LastDoorOpenTime = GetWorld()->GetTimeSeconds();
+	if (GetTotalMassOfActorsOnPlate() > TriggerMass) {
+		OnOpen.Broadcast();
 	}
-	
-	if (GetWorld()->GetTimeSeconds() - LastDoorOpenTime > DoorCloseDelay) {
-		CloseDoor();
+	else {
+		OnClose.Broadcast();
 	}
 }
 
